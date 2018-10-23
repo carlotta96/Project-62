@@ -1,6 +1,7 @@
 birth_data <- read.csv("/Users/teng/Downloads/babies23.data", sep = "")
 library(dplyr)
 
+#Data cleaning=========================================================================================
 with_invalid_9 <- birth_data[, c("sex", "ed", "ded", "smoke")]
 with_invalid_9[with_invalid_9 == "9"] <-NA
 
@@ -53,60 +54,65 @@ library(lubridate)
 beginning_date <- ymd("1961-01-01")
 birth_data$date <- beginning_date + (birth_data$date - 1096) * days()
 
+#Linear Regression=========================================================================================
+
 #put all varaibles in the model
 model_v1 <- lm(wt ~ ., data = birth_data)
-summary(model_v1)
-
+summary(model_v1) # coefficient of number 7 is NA; adj R squared = 0.2909
 library(car)
 Anova(model_v1)
-model_v1 <- step(model_v1) #only 7 variables used using AIC
+model_v1 <- step(model_v1, direction = "both") #only 7 variables used using AIC
 summary(model_v1)
 
 model_v1 <- lm(wt ~ gestation + parity + ht + drace + dwt + time + number, birth_data)
-summary(model_v1) # adj R squared = 0.3066
+summary(model_v1) 
+
+# parameter of number 7 is NA. 
+alias(model_v1) #seems variable time and number have collinearity
+# drop number first
+model_v2 <- update(model_v1,. ~ . - number)
+summary(model_v2) # adj R squared = 0.2944; time2-8 is not significant
+anova(model_v1, model_v2) # p = 0.01373
+#drop time then
+model_v3 <- update(model_v1,. ~ . - time)
+summary(model_v3) # adj R squared = 0.2952, so time is droped
 
 
-# combine some levels in parity and adj R squared improves to 0.3107
+
+
+
+# combine some levels in parity and adj R squared improves to 0.2991
 levels(birth_data$parity)[levels(birth_data$parity)%in% c("0")] <- "initial pregnancy"
 levels(birth_data$parity)[levels(birth_data$parity)%in% c("1", "2")] <- "2 previous pregnancy"
 levels(birth_data$parity)[levels(birth_data$parity)%in% c("3", "4", "5")] <- "3-5 previous pregnancy"
 levels(birth_data$parity)[levels(birth_data$parity)%in% c("10", "11")] <- "10-11 previous pregnancy"
-model_v2 <- lm(wt ~ gestation + parity + ht + drace + dwt + time + number, birth_data)
-summary(model_v2) # adj R squared = 0.3107
-Anova(model_v2)
-
-
-# parameter of number 7 is NA. 
-alias(model_v2) #seems variable time and number have collinearity
-# drop number first
-model_v3 <- lm(wt ~ gestation + parity + ht + drace + dwt + time, birth_data)
-summary(model_v3) # adj R squared = 0.2984 time2-8 is not significant
-
-#drop time 
 model_v4 <- lm(wt ~ gestation + parity + ht + drace + dwt + number, birth_data)
-summary(model_v4) # adj R squared = 0.2991, so drop time 
+summary(model_v4) # adj R squared = 0.2991
+Anova(model_v4)
 
-#================================Following needs to be updated=================================================
-
-
-
-
-
-#interaction model time * gestation
-interaction_model_1 <- lm(wt ~ time * gestation, data = birth_data)
+#Interaction  ================================================================================================
+#interaction model number * gestation
+interaction_model_1 <- lm(wt ~ number * gestation, data = birth_data)
 summary(interaction_model_1)
 Anova(interaction_model_1) #p = 0.004663 < 0.05, reject HO, the interaction term should keep
 
 #add interaction to model
-model_v2 <- lm(wt ~ .+ time * gestation, data = birth_data)
-summary(model_v2)
-model_v2 <- step(model_v2) #gestation + parity + ht + drace + dwt + time + number + gestation:time
+model_v5 <- update(model_v4, .~. + number * gestation)
+summary(model_v5)
+model_v6 <- step(model_v5)
+
+#interaction model drace * ht
+interaction_model_2 <- lm(wt ~ drace * ht,birth_data)
+summary(interaction_model_2)
+Anova(interaction_model_2) # p < 0.05 keep interaction
+
+#add interaction drace:ht to model
+model_v7 <- update(model_v6, .~. + drace * ht)
+summary(model_v7)
+model_v8 <- step(model_v7) 
 
 
-model_v3 <- lm(wt ~ .+ time * gestation + time * number, data = birth_data)
-summary(model_v3)
-model_v3 <- step(model_v3) 
-
+#================following will be updated=======================================
 
 
 # adding new variable - BMI
