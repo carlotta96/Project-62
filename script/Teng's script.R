@@ -76,12 +76,17 @@ summary(model_v2) # adj R squared = 0.3107
 Anova(model_v2)
 
 
-#================================Following needs to be updated=================================================
+# parameter of number 7 is NA. 
+alias(model_v2) #seems variable time and number have collinearity
+# drop number first
+model_v3 <- lm(wt ~ gestation + parity + ht + drace + dwt + time, birth_data)
+summary(model_v3) # adj R squared = 0.2984 time2-8 is not significant
 
-# parameter of number 7 is NA. It's collinearity prob. combine number 7 and number 6
-levels(birth_data$number)[levels(birth_data$number) %in% c("7", "6","5")] <- "5-7"
-model_v3 <- lm(wt ~ gestation + parity + ht + drace + dwt + time + number, birth_data)
-summary(model_v3) # adj R squared = 0.3107
+#drop time 
+model_v4 <- lm(wt ~ gestation + parity + ht + drace + dwt + number, birth_data)
+summary(model_v4) # adj R squared = 0.2991, so drop time 
+
+#================================Following needs to be updated=================================================
 
 
 
