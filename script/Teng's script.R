@@ -26,11 +26,19 @@ birth_data <- na.omit(birth_data)
 #get rid of 999 in gestation
 birth_data <- filter(birth_data, gestation !=999)
 
+#get rid of 10 in race and drace, not defined, could be mistakes
+birth_data <- filter(birth_data, race !=10)
+birth_data <- filter(birth_data, drace !=10)
+
 # 6 and 7 is the same for ed and ded
 birth_data$ed[birth_data$ed == 7] <- 6
 birth_data$ded[birth_data$ded == 7] <- 6
 
-
+# combine race 0-5 = white into one level
+birth_data$race[birth_data$race == 1 | birth_data$race == 2 | birth_data$race == 3 | birth_data$race == 4 |
+                  birth_data$race == 5] <- 0
+birth_data$drace[birth_data$drace == 1 | birth_data$drace == 2 | birth_data$drace == 3 | birth_data$drace == 4 |
+                   birth_data$drace == 5] <- 0
 
 # get rid of factor varaible that has only one level and somke & time duplicated.
 birth_data <- birth_data[, !names(birth_data) %in% c("id", "pluralty", "outcome", "sex", "smoke")]
@@ -40,38 +48,44 @@ birth_data <- birth_data %>% mutate(
   marital = factor(marital), ed = factor(ed), ded = factor(ded), parity = factor(parity),
   race = factor(race), drace = factor(drace), inc = factor(inc), time = factor(time), number = factor(number))
 
-# deal with varaibel date
+# deal with varaible date
+library(lubridate)
 beginning_date <- ymd("1961-01-01")
 birth_data$date <- beginning_date + (birth_data$date - 1096) * days()
 
-# adding new variable - BMI
-
-birth_data <- birth_data %>% mutate(BMI = (wt.1 * 0.453592) / (ht * 0.0254)^2)
-birth_data <- birth_data %>% mutate(dBMI = (dwt * 0.453592) / (dht * 0.0254)^2)
-
-birth_data <- birth_data[, !names(birth_data) %in% c("ht", "dht", "wt.1", "dwt")]
-
-# draw some pics
-library(ggplot2)
-varname <- colnames(birth_data)
-t <- 1
-for (i in colnames(birth_data)){
-  assign(varname[t], ggplot(data = birth_data) + geom_point(mapping = aes_string(x = i, y = "wt")))
-  t <- t + 1
-}
-
-library(gridExtra)
-grid.arrange(date, gestation, marital, ed, ded, parity, race, age, ht, 
-             drace, dage, dht, wt, wt.1, dwt, inc, time, number, ncol = 4, nrow = 5) 
-
-
-
+#put all varaibles in the model
 model_v1 <- lm(wt ~ ., data = birth_data)
 summary(model_v1)
 
 library(car)
 Anova(model_v1)
-model_v1 <- step(model_v1) #only 7 variables used 
+model_v1 <- step(model_v1) #only 7 variables used using AIC
+summary(model_v1)
+
+model_v1 <- lm(wt ~ gestation + parity + ht + drace + dwt + time + number, birth_data)
+summary(model_v1) # adj R squared = 0.3066
+
+
+# combine some levels in parity and adj R squared improves to 0.3107
+levels(birth_data$parity)[levels(birth_data$parity)%in% c("0")] <- "initial pregnancy"
+levels(birth_data$parity)[levels(birth_data$parity)%in% c("1", "2")] <- "2 previous pregnancy"
+levels(birth_data$parity)[levels(birth_data$parity)%in% c("3", "4", "5")] <- "3-5 previous pregnancy"
+levels(birth_data$parity)[levels(birth_data$parity)%in% c("10", "11")] <- "10-11 previous pregnancy"
+model_v2 <- lm(wt ~ gestation + parity + ht + drace + dwt + time + number, birth_data)
+summary(model_v2) # adj R squared = 0.3107
+Anova(model_v2)
+
+
+#================================Following needs to be updated=================================================
+
+# parameter of number 7 is NA. It's collinearity prob. combine number 7 and number 6
+levels(birth_data$number)[levels(birth_data$number) %in% c("7", "6","5")] <- "5-7"
+model_v3 <- lm(wt ~ gestation + parity + ht + drace + dwt + time + number, birth_data)
+summary(model_v3) # adj R squared = 0.3107
+
+
+
+
 
 #interaction model time * gestation
 interaction_model_1 <- lm(wt ~ time * gestation, data = birth_data)
@@ -87,3 +101,23 @@ model_v2 <- step(model_v2) #gestation + parity + ht + drace + dwt + time + numbe
 model_v3 <- lm(wt ~ .+ time * gestation + time * number, data = birth_data)
 summary(model_v3)
 model_v3 <- step(model_v3) 
+
+
+
+# adding new variable - BMI
+birth_data <- birth_data %>% mutate(BMI = (wt.1 * 0.453592) / (ht * 0.0254)^2)
+birth_data <- birth_data %>% mutate(dBMI = (dwt * 0.453592) / (dht * 0.0254)^2)
+
+
+# draw some pics
+library(ggplot2)
+varname <- colnames(birth_data)
+t <- 1
+for (i in colnames(birth_data)){
+  assign(varname[t], ggplot(data = birth_data) + geom_point(mapping = aes_string(x = i, y = "wt")))
+  t <- t + 1
+}
+
+library(gridExtra)
+grid.arrange(date, gestation, marital, ed, ded, parity, race, age, ht, 
+             drace, dage, dht, wt, wt.1, dwt, inc, time, number, ncol = 4, nrow = 5) 
