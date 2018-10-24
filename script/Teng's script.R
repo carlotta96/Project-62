@@ -112,7 +112,26 @@ summary(model_v7)
 model_v8 <- step(model_v7) 
 
 
-#================following will be updated=======================================
+#==bootstrapping==============================================================================
+bootstrapping <- function(index, dataset){
+  dataDim <- nrow(dataset)
+  bootstrap_data <- dataset[sample(1 : dataDim, dataDim, replace = T),]
+  mod <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number + ht:drace, bootstrap_data)
+  coef(mod)
+}
+
+Coeflist <- lapply(1:10, bootstrapping, dataset = birth_data)
+
+bootCoefs <- plyr::ldply(Coeflist) #this may exert error because every time we sample, the new dataset may not 
+#include all the levels for those catergorical variables. The length of coefficient list may be different. Will
+#fix this later
+
+
+
+
+
+
+
 
 
 # adding new variable - BMI
