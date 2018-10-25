@@ -25,3 +25,11 @@ race
 time
 number;
 
+*AIC model selection;
+title "AIC Model Selection";
+
+proc reg data=bw ;
+model wt = date gestation marital ed ded parity race age drace dage inc time number BMI dBMI/clm clb selection=cp collin vif;
+run; 
+quit;
+*if selection=cp then the AIC statistic is also added to the SubsetSelSummary table; 
