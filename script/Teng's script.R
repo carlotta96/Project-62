@@ -75,17 +75,22 @@ dummy_variables <- model.matrix(model_v1)[, 19:33]
 dummy_variables <- data.frame(dummy_variables)
 dummy_variables <- dummy_variables %>% mutate(sum_of_time = time1+time2+time3+time4+time5+time6+time7+time8,
                                               sum_of_number1_to_number6 = number1+number2+number3+number4+number5+number6)
-dummy_variables <- 
-
+dummy_variables <- dummy_variables %>% mutate(difference = sum_of_time - sum_of_number1_to_number6 - number7)
+# there is linear relationship within our variables: 
+#number 7 = time1 + time2 + time3 + time4 + time5 + time6 + time7 + time8 - number1 - number2 - number3 - number4 - number5 - number6
 
 
 # drop number first
-model_v2 <- update(model_v1,. ~ . - number)
-summary(model_v2) # adj R squared = 0.2944; time2-8 is not significant
-anova(model_v1, model_v2) # p = 0.01373
+model_v2 <- lm(wt ~. - number, birth_data)
+summary(model_v2) 
+model_v2 <- step(model_v2)
+summary(model_v2) #Adj R square = 0.2944
+
 #drop time then
-model_v3 <- update(model_v1,. ~ . - time)
-summary(model_v3) # adj R squared = 0.2952, so time is droped
+model_v3 <- lm(wt ~. - time, birth_data)
+summary(model_v3) 
+model_v3 <- step(model_v3)
+summary(model_v3) #Adj R square = 0.2952. Time is dropped. wt ~ gestation + parity + ht + drace + dwt + number
 
 
 # combine some levels in parity and adj R squared improves to 0.2991
@@ -99,39 +104,30 @@ Anova(model_v4)
 
 #Interaction  ================================================================================================
 #interaction model number * gestation
-interaction_model_1 <- lm(wt ~ number * gestation, data = birth_data)
-summary(interaction_model_1)
-Anova(interaction_model_1) #p = 0.004663 < 0.05, reject HO, the interaction term should keep
 
-#add interaction to model
 model_v5 <- update(model_v4, .~. + number * gestation)
 summary(model_v5)
+Anova(model_v5) # p = 0.0049484 < 0.05, reject HO, the interaction term should keep
 model_v6 <- step(model_v5)
-
-#interaction model drace * ht
-interaction_model_2 <- lm(wt ~ drace * ht,birth_data)
-summary(interaction_model_2)
-Anova(interaction_model_2) # p < 0.05 keep interaction
-
-#add interaction drace:ht to model
-model_v7 <- update(model_v6, .~. + drace * ht)
-summary(model_v7)
-model_v8 <- step(model_v7) 
 
 
 #==bootstrapping==============================================================================
 bootstrapping <- function(index, dataset){
   dataDim <- nrow(dataset)
   bootstrap_data <- dataset[sample(1 : dataDim, dataDim, replace = T),]
-  mod <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number + ht:drace, bootstrap_data)
+  mod <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number, bootstrap_data)
   coef(mod)
 }
 
-Coeflist <- lapply(1:10, bootstrapping, dataset = birth_data)
+Coeflist <- lapply(1:500, bootstrapping, dataset = birth_data)
+Coef_set <- do.call(cbind, lapply(lapply(Coeflist, unlist), `length<-`, max(lengths(Coeflist))))
+Coef_bootstrap<-t(Coef_set)
 
-bootCoefs <- plyr::ldply(Coeflist) #this may exert error because every time we sample, the new dataset may not 
-#include all the levels for those catergorical variables. The length of coefficient list may be different. Will
-#fix this later
+CI <- apply(Coef_bootstrap, 2, quantile,na.rm=T,probs=c(0.025, 0.975))
+
+
+
+
 
 
 
@@ -159,25 +155,3 @@ library(gridExtra)
 grid.arrange(date, gestation, marital, ed, ded, parity, race, age, ht, 
              drace, dage, dht, wt, wt.1, dwt, inc, time, number, ncol = 4, nrow = 5) 
 
-
-> a <- model.matrix(model_v1)
-> a<-data.frame(a)
-> View(a)
-> b<- lapply(a, time1+time2+time3-number1-number2-number3)
-
-> time1 <- a$time1
-> time2 <- a$time2
-> time3 <- a$time3
-> time4 <- a$time4
-> time5 <- a$time5
-> time6 <- a$time6
-> time7 <- a$time7
-> time8 <- a$time8
-> number1<-a$number1
-> number2<-a$number2
-> number3<-a$number3
-> number4<-a$number4
-> number5<-a$number5
-> number6<-a$number6
-> number7<-a$number7
-> time1+time2+time3+time4+time5+time6+time7+time8-number1-number2-number3-number4-number5-number6
