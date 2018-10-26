@@ -128,6 +128,17 @@ for(i in 1:5){
   trainData <- birth_data[-testIndexes,]
   }
 
+data(birth_data)
+set.seed(1)
+
+model <- train(gestation ~ parity, birth_data,
+               method = "lm",
+               trControl = trainControl(
+                 method = "cv", number = 5,
+                 verboseIter = TRUE
+               )
+)
+
 
 #==bootstrapping==============================================================================
 bootstrapping <- function(index, dataset){
