@@ -110,8 +110,6 @@ summary(model_v5)
 Anova(model_v5) # p = 0.0049484 < 0.05, reject HO, the interaction term should keep
 model_v6 <- step(model_v5)
 
-
-
 #interaction model drace * ht
 interaction_model_2 <- lm(wt ~ drace * ht,birth_data)
 summary(interaction_model_2)
@@ -122,23 +120,41 @@ model_v7 <- update(model_v6, .~. + drace * ht)
 summary(model_v7)
 model_v8 <- step(model_v7) 
 
-#5 fold cross validation======================================================================
 
-birth_data <- birth_data[sample(nrow(birth_data)),]
-folds <- cut(seq(1, nrow(birth_data)), breaks = 5, labels = FALSE)
-for(i in 1:5){
-  testIndexes <- which(folds==i, arr.ind = TRUE)
-  testData <- birth_data[testIndexes, ]
-  trainData <- birth_data[-testIndexes,]
-  }
+# Validation Dataset and Mean Squared Error=================================================================
+# Hold back random 20% of observations as Test Dataset and rest 80% as training dataset
+train_size <- floor(0.8 * nrow(birth_data))
+set.seed(416)
+train_index <- sample(seq_len(nrow(birth_data)), size = train_size)
+train_set <- birth_data[train_index,]
+test_set <- birth_data[-train_index,]
 
+# Suppose two of out best model is(just an example):
+# modelA: wt ~ gestation + parity + ht + drace + dwt + number + gestation:number + ht:drace
+# modelB: wt ~ gestation + parity + ht + drace + dwt + number + gestation:number
 
+# calculate coefficients for ModelA using training dataset
+modelA <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number + ht:drace, train_set)
+summary(modelA)
+
+modelB <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number, train_set)
+summary(modelB)
+
+# make predictions on Test Dataset
+predictionA <- predict(modelA, newdata = test_set)
+predictionB <- predict(modelB, newdata = test_set)
+
+# calculate mean squared error for ModelA (MSE = mean of squared differences between prediction and observed value)
+MSE_A <- mean((test_set$wt-predictionA)^2)
+MSE_B <- mean((test_set$wt-predictionB)^2)
+
+#since MSE_A < MSE_B, modelA is better! Choose Model A
 
 #==bootstrapping==============================================================================
 bootstrapping <- function(index, dataset){
   dataDim <- nrow(dataset)
   bootstrap_data <- dataset[sample(1 : dataDim, dataDim, replace = T),]
-  mod <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number, bootstrap_data)
+  mod <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number + ht:drace, bootstrap_data)
   coef(mod)
 }
 
