@@ -110,8 +110,8 @@ summary(model_v5)
 Anova(model_v5) # p = 0.0049484 < 0.05, reject HO, the interaction term should keep
 model_v6 <- step(model_v5)
 
-<<<<<<< HEAD
-=======
+
+
 #interaction model drace * ht
 interaction_model_2 <- lm(wt ~ drace * ht,birth_data)
 summary(interaction_model_2)
@@ -132,7 +132,7 @@ for(i in 1:5){
   trainData <- birth_data[-testIndexes,]
   }
 
->>>>>>> 2f06e4d16fa711ca5f9617fdd39736aacc29f466
+
 
 #==bootstrapping==============================================================================
 bootstrapping <- function(index, dataset){
