@@ -118,6 +118,16 @@ model_v7 <- update(model_v6, .~. + drace * ht)
 summary(model_v7)
 model_v8 <- step(model_v7) 
 
+#5 fold cross validation======================================================================
+
+birth_data <- birth_data[sample(nrow(birth_data)),]
+folds <- cut(seq(1, nrow(birth_data)), breaks = 5, labels = FALSE)
+for(i in 1:5){
+  testIndexes <- which(folds==i, arr.ind = TRUE)
+  testData <- birth_data[testIndexes, ]
+  trainData <- birth_data[-testIndexes,]
+  }
+
 
 #==bootstrapping==============================================================================
 bootstrapping <- function(index, dataset){
