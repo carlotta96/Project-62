@@ -69,6 +69,16 @@ summary(model_v1)
 
 # parameter of number 7 is NA. 
 alias(model_v1) #seems variable time and number have collinearity
+
+# extract the dummy variables of time and number
+dummy_variables <- model.matrix(model_v1)[, 19:33]
+dummy_variables <- data.frame(dummy_variables)
+dummy_variables <- dummy_variables %>% mutate(sum_of_time = time1+time2+time3+time4+time5+time6+time7+time8,
+                                              sum_of_number1_to_number6 = number1+number2+number3+number4+number5+number6)
+dummy_variables <- 
+
+
+
 # drop number first
 model_v2 <- update(model_v1,. ~ . - number)
 summary(model_v2) # adj R squared = 0.2944; time2-8 is not significant
@@ -76,9 +86,6 @@ anova(model_v1, model_v2) # p = 0.01373
 #drop time then
 model_v3 <- update(model_v1,. ~ . - time)
 summary(model_v3) # adj R squared = 0.2952, so time is droped
-
-
-
 
 
 # combine some levels in parity and adj R squared improves to 0.2991
@@ -151,3 +158,26 @@ for (i in colnames(birth_data)){
 library(gridExtra)
 grid.arrange(date, gestation, marital, ed, ded, parity, race, age, ht, 
              drace, dage, dht, wt, wt.1, dwt, inc, time, number, ncol = 4, nrow = 5) 
+
+
+> a <- model.matrix(model_v1)
+> a<-data.frame(a)
+> View(a)
+> b<- lapply(a, time1+time2+time3-number1-number2-number3)
+
+> time1 <- a$time1
+> time2 <- a$time2
+> time3 <- a$time3
+> time4 <- a$time4
+> time5 <- a$time5
+> time6 <- a$time6
+> time7 <- a$time7
+> time8 <- a$time8
+> number1<-a$number1
+> number2<-a$number2
+> number3<-a$number3
+> number4<-a$number4
+> number5<-a$number5
+> number6<-a$number6
+> number7<-a$number7
+> time1+time2+time3+time4+time5+time6+time7+time8-number1-number2-number3-number4-number5-number6
