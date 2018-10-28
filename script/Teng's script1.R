@@ -149,6 +149,7 @@ MSE_B <- mean((test_set$wt-predictionB)^2)
 
 #since MSE_A > MSE_B, modelB is better! Choose Model B
 model_final <- modelB
+summary(model_final)
 
 #==bootstrapping==============================================================================
 bootstrapping <- function(index, dataset){
