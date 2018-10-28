@@ -54,71 +54,73 @@ library(lubridate)
 beginning_date <- ymd("1961-01-01")
 birth_data$date <- beginning_date + (birth_data$date - 1096) * days()
 
-#Linear Regression=========================================================================================
-
-#put all varaibles in the model
-model_v1 <- lm(wt ~ ., data = birth_data)
-summary(model_v1) # coefficient of number 7 is NA; adj R squared = 0.2909
-library(car)
-Anova(model_v1)
-model_v1 <- step(model_v1, direction = "both") #only 7 variables used using AIC
-summary(model_v1)
-
-model_v1 <- lm(wt ~ gestation + parity + ht + drace + dwt + time + number, birth_data)
-summary(model_v1) 
-
-# parameter of number 7 is NA. 
-alias(model_v1) #seems variable time and number have collinearity
-
-# extract the dummy variables of time and number
-dummy_variables <- model.matrix(model_v1)[, 19:33]
-dummy_variables <- data.frame(dummy_variables)
-dummy_variables <- dummy_variables %>% mutate(sum_of_time = time1+time2+time3+time4+time5+time6+time7+time8,
-                                              sum_of_number1_to_number6 = number1+number2+number3+number4+number5+number6)
-dummy_variables <- dummy_variables %>% mutate(difference = sum_of_time - sum_of_number1_to_number6 - number7)
-# there is linear relationship within our variables: 
-#number 7 = time1 + time2 + time3 + time4 + time5 + time6 + time7 + time8 - number1 - number2 - number3 - number4 - number5 - number6
-
-
-# drop number first
-model_v2 <- lm(wt ~. - number, birth_data)
-summary(model_v2) 
-model_v2 <- step(model_v2)
-summary(model_v2) #Adj R square = 0.2944
-
-#drop time then
-model_v3 <- lm(wt ~. - time, birth_data)
-summary(model_v3) 
-model_v3 <- step(model_v3)
-summary(model_v3) #Adj R square = 0.2952. Time is dropped. wt ~ gestation + parity + ht + drace + dwt + number
-
-
-# combine some levels in parity and adj R squared improves to 0.2991
+# combine factor variable "parity" into 5 levels
 levels(birth_data$parity)[levels(birth_data$parity)%in% c("0")] <- "initial pregnancy"
 levels(birth_data$parity)[levels(birth_data$parity)%in% c("1", "2")] <- "2 previous pregnancy"
 levels(birth_data$parity)[levels(birth_data$parity)%in% c("3", "4", "5")] <- "3-5 previous pregnancy"
+levels(birth_data$parity)[levels(birth_data$parity)%in% c("6", "7", "9")] <- "6-9 previous pregnancy"
 levels(birth_data$parity)[levels(birth_data$parity)%in% c("10", "11")] <- "10-11 previous pregnancy"
-model_v4 <- lm(wt ~ gestation + parity + ht + drace + dwt + number, birth_data)
-summary(model_v4) # adj R squared = 0.2991
-Anova(model_v4)
+
+# combine factor variable "number" into 
+levels(birth_data$number)[levels(birth_data$number)%in% c("0")] <- "never smoker"
+levels(birth_data$number)[levels(birth_data$number)%in% c("1", "2")] <- "light smoker"
+levels(birth_data$number)[levels(birth_data$number)%in% c("3", "4","5")] <- "normal smoker"
+levels(birth_data$number)[levels(birth_data$number)%in% c("6", "7")] <- "heavy smoker"
+
+# adding new variable - BMI
+birth_data <- birth_data %>% mutate(BMI = (wt.1 * 0.453592) / (ht * 0.0254)^2)
+birth_data <- birth_data %>% mutate(dBMI = (dwt * 0.453592) / (dht * 0.0254)^2)
+
+#Linear Regression=========================================================================================
+#Using direction "both" for stepwise selection
+full <- lm(wt ~ ., data = birth_data)
+null <- lm(wt ~ 1, data = birth_data)
+model_v1 <- step(null, scope = list(lower = null, upper = full), direction = 'both')
+summary(model_v1)
+library(car)
+Anova(model_v1)
+
+
+model_v1 <- lm(wt ~ gestation + parity + ht + drace + dwt + number + time, birth_data)
+summary(model_v1) 
+
+# coefficient of time8 is NA. 
+alias(model_v1) #seems variable time and number have collinearity
+
+# extract the dummy variables of time and number
+dummy_variables <- data.frame(model.matrix(model_v1)[, 13:23])
+dummy_variables_time1to7 <- dummy_variables[,4:10]
+dummy_variables_number <- dummy_variables[,1:3]
+difference <- rowSums(dummy_variables_number)-rowSums(dummy_variables_time1to7)
+summary(dummy_variables$time8 - difference)
+# there is linear relationship within our variables: 
+#time8 = number_never smoker + number_light + number_normal smoker + number_heavy smoker
+ # - (time1 + time2 + time3 + time4 + time5 + time6 + time7)
+
+
+# drop number first (F statistic = 14.11)
+model_v2 <- update(model_v1, .~. - number)
+summary(model_v2) 
+
+#drop time then (F statistic = 18.42), so eventually time is dropped.
+model_v3 <- update(model_v1, .~. - time)
+summary(model_v3) 
+
 
 #Interaction  ================================================================================================
 #interaction model number * gestation
 
-model_v5 <- update(model_v4, .~. + number * gestation)
-summary(model_v5)
-Anova(model_v5) # p = 0.0049484 < 0.05, reject HO, the interaction term should keep
-model_v6 <- step(model_v5)
+model_v4 <- update(model_v3, .~. + number * gestation)
+summary(model_v4)
+Anova(model_v4) # p = 0.0001537 < 0.05, reject HO, the interaction term should keep
+model_v5 <- step(model_v4)
 
 #interaction model drace * ht
-interaction_model_2 <- lm(wt ~ drace * ht,birth_data)
-summary(interaction_model_2)
-Anova(interaction_model_2) # p < 0.05 keep interaction
+model_v6 <- update(model_v5, .~. + drace:ht)
+summary(model_v6)
+Anova(model_v6) # p = 0.069 slightly higher than 0.05, use AIC
+model_v7 <- step(model_v6) # AIC keeps the interaction
 
-#add interaction drace:ht to model
-model_v7 <- update(model_v6, .~. + drace * ht)
-summary(model_v7)
-model_v8 <- step(model_v7) 
 
 
 # Validation Dataset and Mean Squared Error=================================================================
@@ -148,13 +150,13 @@ predictionB <- predict(modelB, newdata = test_set)
 MSE_A <- mean((test_set$wt-predictionA)^2)
 MSE_B <- mean((test_set$wt-predictionB)^2)
 
-#since MSE_A < MSE_B, modelA is better! Choose Model A
+#since MSE_A > MSE_B, modelB is better! Choose Model B
 
 #==bootstrapping==============================================================================
 bootstrapping <- function(index, dataset){
   dataDim <- nrow(dataset)
   bootstrap_data <- dataset[sample(1 : dataDim, dataDim, replace = T),]
-  mod <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number + ht:drace, bootstrap_data)
+  mod <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number, bootstrap_data)
   coef(mod)
 }
 
@@ -164,22 +166,7 @@ Coef_bootstrap<-t(Coef_set)
 
 CI <- apply(Coef_bootstrap, 2, quantile,na.rm=T,probs=c(0.025, 0.975))
 
-
-
-
-
-
-
-
-
-
-
-
-
-# adding new variable - BMI
-birth_data <- birth_data %>% mutate(BMI = (wt.1 * 0.453592) / (ht * 0.0254)^2)
-birth_data <- birth_data %>% mutate(dBMI = (dwt * 0.453592) / (dht * 0.0254)^2)
-
+#Below is just for summarising data==================================================================
 
 # draw some pics
 library(ggplot2)
