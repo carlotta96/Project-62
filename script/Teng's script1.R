@@ -77,9 +77,6 @@ full <- lm(wt ~ ., data = birth_data)
 null <- lm(wt ~ 1, data = birth_data)
 model_v1 <- step(null, scope = list(lower = null, upper = full), direction = 'both')
 summary(model_v1)
-library(car)
-Anova(model_v1)
-
 
 model_v1 <- lm(wt ~ gestation + parity + ht + drace + dwt + number + time, birth_data)
 summary(model_v1) 
@@ -94,7 +91,7 @@ dummy_variables_number <- dummy_variables[,1:3]
 difference <- rowSums(dummy_variables_number)-rowSums(dummy_variables_time1to7)
 summary(dummy_variables$time8 - difference)
 # there is linear relationship within our variables: 
-#time8 = number_never smoker + number_light + number_normal smoker + number_heavy smoker
+#time8 = number_never smoker + number_light smoker + number_normal smoker + number_heavy smoker
  # - (time1 + time2 + time3 + time4 + time5 + time6 + time7)
 
 
@@ -151,6 +148,7 @@ MSE_A <- mean((test_set$wt-predictionA)^2)
 MSE_B <- mean((test_set$wt-predictionB)^2)
 
 #since MSE_A > MSE_B, modelB is better! Choose Model B
+model_final <- modelB
 
 #==bootstrapping==============================================================================
 bootstrapping <- function(index, dataset){
@@ -181,3 +179,34 @@ library(gridExtra)
 grid.arrange(date, gestation, marital, ed, ded, parity, race, age, ht, 
              drace, dage, dht, wt, wt.1, dwt, inc, time, number, ncol = 4, nrow = 5) 
 
+# Checking for assumptions ===========================================================================
+
+#Assumption 1: The regression model is linear in parameters
+# wt ~ gestation + parity + ht + drace + dwt + number + gestation:number parameter is linear
+
+#Assumption 2: The mean of residual is zero
+mean(model_final$residuals)
+
+#Assumtion 3: Homoscedasticity of residuals or equal variance
+old.par <- par(no.readonly = TRUE)
+par(mfrow = c(2, 2))
+plot(model_final)
+par(old.par)
+
+#Assumption 4: No autocorrelation of residuals
+library(ggplot2)
+acf(model_final$residuals)
+
+#Assumption 5: The number of observations must be greater than number of Xs
+#602observations >> number of parameters
+
+#Assumption 6: The variability in X values is positive (X values in a given dataset must not all be the same)
+
+#Assumption 7: No perfect collinearity
+library(car)
+vif(model_final)
+
+#Assumption 8: Normality of residuals
+qqnorm(model_final$residuals)
+qqline(model_final$residuals)
+shapiro.test(model_final$residuals)
