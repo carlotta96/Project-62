@@ -106,7 +106,7 @@ summary(model_v3)
 
 #Interaction  ================================================================================================
 #interaction model number * gestation
-
+library(car)
 model_v4 <- update(model_v3, .~. + number * gestation)
 summary(model_v4)
 Anova(model_v4) # p = 0.0001537 < 0.05, reject HO, the interaction term should keep
