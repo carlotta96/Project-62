@@ -71,7 +71,7 @@ levels(birth_data$number)[levels(birth_data$number)%in% c("6", "7")] <- "heavy s
 birth_data <- birth_data %>% mutate(BMI = (wt.1 * 0.453592) / (ht * 0.0254)^2)
 birth_data <- birth_data %>% mutate(dBMI = (dwt * 0.453592) / (dht * 0.0254)^2)
 
-#Linear Regression=========================================================================================
+#Linear Regression (Using AIC)=========================================================================================
 #Using direction "both" for stepwise selection
 full <- lm(wt ~ ., data = birth_data)
 null <- lm(wt ~ 1, data = birth_data)
@@ -104,13 +104,48 @@ model_v3 <- update(model_v1, .~. - time)
 summary(model_v3) 
 
 
-#Interaction  ================================================================================================
+#Interaction for AIC Model================================================================================================
 #interaction model number * gestation
 library(car)
 model_v4 <- update(model_v3, .~. + number * gestation)
 summary(model_v4)
 Anova(model_v4) # p = 0.0001537 < 0.05, reject HO, the interaction term should keep
 model_v5 <- step(model_v4)
+
+
+#Linear Regression (P-value) ==================================================================================
+Model<- lm(wt ~ wt.1 + dwt + ht + dht + gestation + number + parity + BMI + dBMI + race + drace, birth_data)
+summary(Model)
+
+#remove dBMI
+Model <- update(Model, .~. - dBMI)
+summary(Model) # R square improves and F statistics improves
+
+#remove drace
+Model <- update(Model, .~. - drace)
+summary(Model) # F statitsics improves even though R square decreases a little bit
+
+#remove dht
+Model <- update(Model, .~. - dht)
+summary(Model) # F statistics improves and R square improves
+
+#remove wt.1
+Model <- update(Model, .~. - wt.1)
+summary(Model) # F statistics improves but R square decreases
+
+#remove BMI
+Model <- update(Model, .~. -BMI)
+summary(Model) # F statistics improves but R square decreases a littl bit.
+
+#all the remaining covariates are significnat now. 
+
+#Interaction (P-value Model)=================================================================================
+#add interaction gestation:number
+Model<- update(Model, .~. + gestation:number)
+summary(Model) #R square improves 
+require(car) 
+Anova(Model) #significant, so keep the interaction
+
 
 
 # Validation Dataset and Mean Squared Error=================================================================
@@ -121,9 +156,9 @@ train_index <- sample(seq_len(nrow(birth_data)), size = train_size)
 train_set <- birth_data[train_index,]
 test_set <- birth_data[-train_index,]
 
-# Suppose two of out best model is(just an example):
-# modelA: wt ~ gestation + parity + ht + drace + dwt + number + gestation:number
-# modelB: wt ~ dwt + ht + gestation + number + parity + race + gestation:number
+# Suppose two of out best model is:
+# modelA: wt ~ gestation + parity + ht + drace + dwt + number + gestation:number (AIC Model)
+# modelB: wt ~ dwt + ht + gestation + number + parity + race + gestation:number (P-value Model)
 
 # calculate coefficients for ModelA using training dataset
 modelA <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number, train_set)
@@ -140,7 +175,7 @@ predictionB <- predict(modelB, newdata = test_set)
 MSE_A <- mean((test_set$wt-predictionA)^2)
 MSE_B <- mean((test_set$wt-predictionB)^2)
 
-#since MSE_A > MSE_B, modelB is better! Choose Model B
+#since MSE_A < MSE_B, modelA is better! Choose Model A
 model_final <- modelA
 summary(model_final)
 
@@ -204,3 +239,4 @@ vif(model_final)
 qqnorm(model_final$residuals)
 qqline(model_final$residuals)
 shapiro.test(model_final$residuals)
+
