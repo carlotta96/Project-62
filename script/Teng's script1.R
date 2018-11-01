@@ -112,13 +112,6 @@ summary(model_v4)
 Anova(model_v4) # p = 0.0001537 < 0.05, reject HO, the interaction term should keep
 model_v5 <- step(model_v4)
 
-#interaction model drace * ht
-model_v6 <- update(model_v5, .~. + drace:ht)
-summary(model_v6)
-Anova(model_v6) # p = 0.069 slightly higher than 0.05, use AIC
-model_v7 <- step(model_v6) # AIC keeps the interaction
-
-
 
 # Validation Dataset and Mean Squared Error=================================================================
 # Hold back random 20% of observations as Test Dataset and rest 80% as training dataset
@@ -129,14 +122,14 @@ train_set <- birth_data[train_index,]
 test_set <- birth_data[-train_index,]
 
 # Suppose two of out best model is(just an example):
-# modelA: wt ~ gestation + parity + ht + drace + dwt + number + gestation:number + ht:drace
-# modelB: wt ~ gestation + parity + ht + drace + dwt + number + gestation:number
+# modelA: wt ~ gestation + parity + ht + drace + dwt + number + gestation:number
+# modelB: wt ~ dwt + ht + gestation + number + parity + race + gestation:number
 
 # calculate coefficients for ModelA using training dataset
-modelA <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number + ht:drace, train_set)
+modelA <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number, train_set)
 summary(modelA)
 
-modelB <- lm(wt ~ gestation + parity + ht + drace + dwt + number + gestation:number, train_set)
+modelB <- lm(wt ~ gestation + parity + ht + race + dwt + number + gestation:number, train_set)
 summary(modelB)
 
 # make predictions on Test Dataset
@@ -148,7 +141,7 @@ MSE_A <- mean((test_set$wt-predictionA)^2)
 MSE_B <- mean((test_set$wt-predictionB)^2)
 
 #since MSE_A > MSE_B, modelB is better! Choose Model B
-model_final <- modelB
+model_final <- modelA
 summary(model_final)
 
 #==bootstrapping==============================================================================
