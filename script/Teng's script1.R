@@ -249,6 +249,10 @@ shapiro.test(model_final$residuals)
 #Additional graphs====================================================================================
 
 #Coef plot
+install.packages("arm")
+install.packages("RColorBrewer")
+require(arm)
+require(RColorBrewer)
 colori1= brewer.pal(9, "Set1")
 #colori=c(colori1,"red","blue","darkgreen","brown4","cyan4")
 par(mfrow=c(1,1))
@@ -281,3 +285,4 @@ abline(v=mean(birth_data$wt), col="blue", lwd=2)
 abline(v=median(birth_data$wt), col="orange", lwd=2)
 legend(60, 140 , legend=c("mean", "median"),col=c("blue", "orange"),
        lty=1:1, cex=1)
+
