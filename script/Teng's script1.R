@@ -113,6 +113,11 @@ Anova(model_v4) # p = 0.0001537 < 0.05, reject HO, the interaction term should k
 model_v5 <- step(model_v4)
 
 
+install.packages("jtools")
+library(jtools)
+summ (model_v5, center = TRUE)
+interact_plot(model_v5, pred ="gestation", modx = "number")
+
 #Linear Regression (P-value) ==================================================================================
 Model<- lm(wt ~ wt.1 + dwt + ht + dht + gestation + number + parity + BMI + dBMI + race + drace, birth_data)
 summary(Model)
@@ -232,6 +237,7 @@ acf(model_final$residuals)
 #Assumption 6: The variability in X values is positive (X values in a given dataset must not all be the same)
 
 #Assumption 7: No perfect collinearity
+install.packages("car")
 library(car)
 vif(model_final)
 
@@ -240,3 +246,38 @@ qqnorm(model_final$residuals)
 qqline(model_final$residuals)
 shapiro.test(model_final$residuals)
 
+#Additional graphs====================================================================================
+
+#Coef plot
+colori1= brewer.pal(9, "Set1")
+#colori=c(colori1,"red","blue","darkgreen","brown4","cyan4")
+par(mfrow=c(1,1))
+Labels <-c("inter","gestation", "2 prev. pregnancy", "3-5 prev. pregnancy", "6-9 prev. pregnancy", "10-11 prev. pregnancy", "mother's height", "mex dad", "black dad", "asian dad", "mixed dad", "father's weight", "light smoker", "normal smoker", "heavy smoker", "gest:light smok", "gest:norm smoker", "gest:heavy smoker") 
+x11()
+coefplot(model_final, varnames = Labels, mar = c(1, 6, 6, 6), xlim=c(-200, 10), col=colori1, cex.pts = 1)
+text(0.21,1.19,labels = "0.21",cex=0.8, col = colori1[1])
+text(2.63,2.19,labels = "2.63",col=colori1[2],cex=0.8)
+text(5.11,3.19,labels = "5.11",col=colori1[3],cex=0.8)
+text(8.58,4.19,labels = "10.58",cex=0.8, col = colori1[4])
+text(1.82,5.19,labels = "1.82",col=colori1[5],cex=0.8)
+text(1.16,6.19,labels = "1.16",cex=0.8, col = colori1[6])
+text(-7.72,7.19,labels = "-7.72",col=colori1[7],cex=0.8)
+text(-6.3,8.19,labels = "-6.3",cex=0.8, col = colori1[8])
+text(-5.64,9.19,labels = "-5.64",col=colori1[9],cex=0.8)
+text(2.66,10.19,labels = "2.66",cex=0.8, col = colori1[1])
+text(0.07,11.19,labels = "0.07",col=colori1[2],cex=0.8)
+text(-82.47,12.19,labels = "-82.47",cex=0.8, col = colori1[3])
+text(-148.75,13.19,labels = "-148.75",col=colori1[4],cex=0.8)
+text(-173.50,14.19,labels = "-173.50",cex=0.8, col = colori1[5])
+text(0.29,15.19,labels = "0.29",col=colori1[6],cex=0.8)
+text(0.50,16.19,labels = "-0.50",cex=0.8, col = colori1[7])
+text(0.59,17.19,labels = "0.59",col=colori1[8],cex=0.8)
+text(x=-50, y=17.19, labels=("R^2 = 0.274"))
+
+#Histogram
+hist(birth_data$wt, main="Histogram of birth weight in ounces", xlab = "Ounces",
+     col = "lightgreen")
+abline(v=mean(birth_data$wt), col="blue", lwd=2)
+abline(v=median(birth_data$wt), col="orange", lwd=2)
+legend(60, 140 , legend=c("mean", "median"),col=c("blue", "orange"),
+       lty=1:1, cex=1)
